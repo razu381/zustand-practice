@@ -1,4 +1,7 @@
 import { create } from "zustand";
+import { persist } from "zustand/middleware"; // ✅ Import persist
+
+
 
 export interface Habit{
     id: string,
@@ -17,31 +20,45 @@ interface HabitState{
 
 
 
-const useHabitStore = create<HabitState>((set) => ({
-    habits: [],
-    addHabit: (habitName,frequency) => set((state) => {
-        //console.log(habitName,frequency,state)
-        return {
-            habits: [...state.habits, {
-                id: crypto.randomUUID(),
-                habitName,
-                frequency,
-                completedDays: [],
-                createdAt: new Date().toISOString()
-            }]
+const useHabitStore = create<HabitState>()(
+    persist(
+        (set) => ({
+            habits: [],
+            addHabit: (habitName, frequency) => set((state) => ({
+                habits: [
+                    ...state.habits,
+                    {
+                        id: crypto.randomUUID(),
+                        habitName,
+                        frequency,
+                        completedDays: [],
+                        createdAt: new Date().toISOString(),
+                    },
+                ],
+            })),
+            deleteHabit: (id: string) =>
+                set((state) => ({
+                    habits: state.habits.filter((habit) => habit.id !== id),
+                })),
+            completeHabit: (id: string) =>
+                set((state) => ({
+                    habits: state.habits.map((habit) =>
+                        habit.id === id
+                            ? {
+                                  ...habit,
+                                  completedDays: [
+                                      ...habit.completedDays,
+                                      new Date().toISOString(),
+                                  ],
+                              }
+                            : habit
+                    ),
+                })),
+        }),
+        {
+            name: "habit-storage", // unique name for localStorage
         }
-    }),
-    deleteHabit: (id: string) => set((state) => ({
-        habits: state.habits.filter(habit => habit.id !== id)
-    })),
-    completeHabit: (id: string) => set(state =>  ({
-        habits: state.habits.map(habit => 
-            habit.id === id ? {
-                ...habit,
-                completedDays: [...habit.completedDays, new Date().toISOString()]
-            } : habit
-        )
-    }))
-}))
+    )
+)
 
 export default useHabitStore
